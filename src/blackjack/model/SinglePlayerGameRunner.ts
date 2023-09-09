@@ -20,6 +20,8 @@ export class SinglePlayerGameRunner {
   lastMatch: Match;
   lastMatchStopTs: number = 0;
 
+  static USER_HAND_IDX = 1;
+
   constructor(delay: number, playerName: string, playerId: string) {
     this.init(delay, playerName, playerId);
   }
@@ -45,7 +47,7 @@ export class SinglePlayerGameRunner {
     // restore from user last playing match
     const userLastMatch = new MatchDao().findByPlayerId(this.player.id);
 
-    if (userLastMatch && userLastMatch.status == MatchStatus.Playing) {
+    if (userLastMatch && userLastMatch.status == MatchStatus.PlayersTurn) {
       this.lastMatch = Match.from(userLastMatch)
     } else {
       // or create new match
@@ -63,7 +65,6 @@ export class SinglePlayerGameRunner {
   private initMatch(customDeck?: Card[]) {
     if (Date.now() - this.lastMatchStopTs < this.delay * 1000) {
       throw new Error(`Need to wait ${this.delay} seconds between each round`);
-      // TODO: Unit test
     }
 
     const playerIds = [DEALER_ID, this.player.id];
@@ -92,25 +93,29 @@ export class SinglePlayerGameRunner {
 
   hit() {
     // validation
-    if (this.lastMatch.status != MatchStatus.Playing) {
+    if (this.lastMatch.status != MatchStatus.PlayersTurn) {
       throw new Error("Invalid match status: " + this.lastMatch.status)
     }
 
-    // const handIdx = TODO;
-    // this.lastMatch.playerHit(handIdx)
+    const playerHand = this.lastMatch.playerHit(SinglePlayerGameRunner.USER_HAND_IDX)
 
-    // return TODO
+    // persist
+    // TODO
+
+    return playerHand
   }
 
   stay() {
     // validation
-    if (this.lastMatch.status != MatchStatus.Playing) {
+    if (this.lastMatch.status != MatchStatus.PlayersTurn) {
       throw new Error("Invalid match status: " + this.lastMatch.status)
     }
 
-    // const handIdx = TODO;
-    // this.lastMatch.playerStay(handIdx)
+    const playerHand = this.lastMatch.playerStay(SinglePlayerGameRunner.USER_HAND_IDX)
 
-    // return TODO
+    // persist
+    // TODO
+
+    return playerHand
   }
 }

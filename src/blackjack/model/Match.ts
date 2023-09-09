@@ -5,7 +5,9 @@ import { Card, CardVariant, getCard } from "./Card";
 type CardLike = [face: string, variant: CardVariant, deckIdx: number];
 
 /*
-  This BlackJack Match support multiple hands
+  This BlackJack Match support multiple hands (eg: 6 hands)
+  1 match n hands
+  1 player can have n hands
  */
 export class Match {
   hands: Hand[] = []; // NOTE: Dealer hand is always at 0
@@ -43,7 +45,9 @@ export class Match {
     return match;
   }
 
-  // include dealer
+  /**
+   * @param handIdx which hand is playing, because of Match support multi hands
+   */
   playerHit(handIdx: number): Hand {
     // validate
     // - only can hit if status is still hit
@@ -68,6 +72,9 @@ export class Match {
     return hand
   }
 
+  /**
+   * @param handIdx which hand is playing, because of Match support multi hands
+   */
   playerStay(handIdx: number) {
     // validate
     if (handIdx >= this.hands.length) {
