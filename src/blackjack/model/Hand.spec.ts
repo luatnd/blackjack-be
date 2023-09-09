@@ -54,6 +54,15 @@ describe("Hand point", () => {
 
     expect(h.point).toEqual(21)
   });
+
+  it("point with Aces 4", () => {
+    const h = new Hand(1);
+    h.hit(getCard("1", V.Heart, 0))
+    h.hit(getCard("1", V.Heart, 1))
+    h.hit(getCard("A", V.Heart, 0))
+
+    expect(h.point).toEqual(13)
+  });
 });
 
 

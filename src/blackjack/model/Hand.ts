@@ -33,8 +33,8 @@ export class Hand {
 
     let min = sumWithoutAce;
     for (let i = 0; i < aceCount; i++) {
-      if (i == aceCount - 1 && min + 11 == BlackJackPoint) {
-        return BlackJackPoint;
+      if (i == aceCount - 1 && min + 11 <= BlackJackPoint) {
+        min += 11;
       } else {
         min += 1;
       }
