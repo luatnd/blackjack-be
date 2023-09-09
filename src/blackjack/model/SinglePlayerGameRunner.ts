@@ -2,6 +2,7 @@ import { Match } from "./Match";
 import { DEALER_ID, PlayerDao, PlayerDto } from "../datasource/dao/Player.dao";
 import { MatchDao } from "../datasource/dao/Match.dao";
 import { MatchStatus } from "../datasource/db-collection/Matchs";
+import { Card } from "./Card";
 
 /**
  * This is game runner class
@@ -13,14 +14,14 @@ import { MatchStatus } from "../datasource/db-collection/Matchs";
  *  g.hit()
  *  g.stay()
  */
-class SinglePlayerGameRunner {
+export class SinglePlayerGameRunner {
   delay: number = 0; // the duration between each round
   player: PlayerDto;
   lastMatch: Match;
   lastMatchStopTs: number = 0;
 
-  constructor(delay: number, playerName: "") {
-    this.init(delay, playerName);
+  constructor(delay: number, playerName: string, playerId: string) {
+    this.init(delay, playerName, playerId);
   }
 
   /**
@@ -28,26 +29,38 @@ class SinglePlayerGameRunner {
    *
    * @param delay
    * @param playerName
+   * @param playerId
    */
-  private init(delay: number, playerName: "") {
+  private init(delay: number, playerName: string, playerId: string, option?: Record<string, any>) {
     this.delay = delay;
 
     // get playerId from player name
-    const player = new PlayerDao().upsertPlayer(playerName);
-    this.player = player
+    // const player = new PlayerDao().upsertPlayer(playerName);
+    // this.player = player
+    this.player = {
+      id: playerId,
+      name: playerName,
+    }
 
     // restore from user last playing match
-    const userLastMatch = new MatchDao().findByPlayerId(player.id);
+    const userLastMatch = new MatchDao().findByPlayerId(this.player.id);
 
     if (userLastMatch && userLastMatch.status == MatchStatus.Playing) {
       this.lastMatch = Match.from(userLastMatch)
     } else {
       // or create new match
-      this.newMatch()
+      this.initMatch()
     }
   }
 
-  public newMatch() {
+  // for unit test
+  static cleanMatch(playerId: string) {
+    new MatchDao().deleteByPlayerId(playerId);
+  }
+
+  // init match
+  // customDeck is use for debug + unit test only
+  private initMatch(customDeck?: Card[]) {
     if (Date.now() - this.lastMatchStopTs < this.delay * 1000) {
       throw new Error(`Need to wait ${this.delay} seconds between each round`);
       // TODO: Unit test
@@ -57,7 +70,24 @@ class SinglePlayerGameRunner {
     // in this game runner: Each player can have only 1 hand
     const playerHandCount = new Array(playerIds.length).fill(1);
 
-    this.lastMatch = "TODO";
+    if (customDeck) {
+      this.lastMatch = Match.newWithDebug(playerIds, playerHandCount, customDeck);
+    } else {
+      this.lastMatch = Match.new(playerIds, playerHandCount);
+    }
+
+
+    // persist
+    // TODO
+  }
+
+  // for debug only
+  debugReInitMatch(customDeck: Card[]) {
+    this.initMatch(customDeck)
+  }
+
+  newMatch() {
+    this.initMatch()
   }
 
   hit() {
@@ -66,10 +96,10 @@ class SinglePlayerGameRunner {
       throw new Error("Invalid match status: " + this.lastMatch.status)
     }
 
-    const handIdx = TODO;
-    this.lastMatch.playerHit(handIdx)
+    // const handIdx = TODO;
+    // this.lastMatch.playerHit(handIdx)
 
-    return TODO
+    // return TODO
   }
 
   stay() {
@@ -78,9 +108,9 @@ class SinglePlayerGameRunner {
       throw new Error("Invalid match status: " + this.lastMatch.status)
     }
 
-    const handIdx = TODO;
-    this.lastMatch.playerStay(handIdx)
+    // const handIdx = TODO;
+    // this.lastMatch.playerStay(handIdx)
 
-    return TODO
+    // return TODO
   }
 }

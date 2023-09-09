@@ -1,4 +1,6 @@
 import InMemDb from "../in-mem-db";
+import { Dao } from "./dao";
+
 export type PlayerDto = {
   id: string,
   name: string,
@@ -6,6 +8,11 @@ export type PlayerDto = {
 export const DEALER_ID = "DEALER";
 
 export class PlayerDao implements Dao<PlayerDto> {
+  insert(item: PlayerDto) {
+    // TODO
+    return item;
+  }
+
   get(id: string): PlayerDto | undefined {
     if (!(id in InMemDb.players)) {
       return undefined;
@@ -13,6 +20,16 @@ export class PlayerDao implements Dao<PlayerDto> {
 
     return { id, name: InMemDb.players[id] };
   }
+
+  update(item: PlayerDto) {
+    // TODO
+    return item;
+  }
+
+  delete(id: string): boolean {
+    return false; // TODO
+  }
+
 
   getPlayerByName(name: string): PlayerDto | undefined {
     const id = this.deriveIdFromName(name);
@@ -24,11 +41,11 @@ export class PlayerDao implements Dao<PlayerDto> {
     let item = this.get(id);
     if (!item) {
       // register new player
-      InMemDb.players[id] = name
-      item = { id, name }
+      InMemDb.players[id] = name;
+      item = { id, name };
     }
 
-    return item
+    return item;
   }
 
   // fake player id from name

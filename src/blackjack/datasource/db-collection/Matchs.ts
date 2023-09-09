@@ -5,7 +5,8 @@ type PlayerId = string
 
 export enum HandStatus {Hit, Stay, Lose, Win, Draw}
 export type HandDto = {
-  playerId: string, // 1 player can have n hands
+  playerId?: string, // 1 player can have n hands
+  handIdx: number;
   cards: Card[],
   status: HandStatus,
 }
