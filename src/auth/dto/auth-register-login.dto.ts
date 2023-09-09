@@ -10,11 +10,11 @@ export class AuthRegisterLoginDto {
   @Validate(IsNotExist, ['User'], {
     message: 'emailAlreadyExists',
   })
-  @IsEmail()
+  // @IsEmail()
   email: string;
 
   @ApiProperty()
-  @MinLength(6)
+  @MinLength(1)
   password: string;
 
   @ApiProperty({ example: 'John' })
