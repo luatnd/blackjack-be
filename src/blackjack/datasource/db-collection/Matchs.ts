@@ -1,4 +1,4 @@
-import { Card } from "../../model/Card";
+import { Card } from "../../game-play/Card";
 
 type Id = string;
 type PlayerId = string
