@@ -1,11 +1,52 @@
 import { Card } from "./Card";
 import { HandDto, HandStatus } from "../datasource/db-collection/Matchs";
 
+const BlackJackPoint = 21;
+
 export class Hand {
   playerId: string // 1 player can have n hands
   handIdx: number;
   private cards: Card[];
   status: HandStatus;
+
+  // this is the best point of hand
+  get point() {
+    /*
+    Point of hand should be nearest to 21
+    because Ace can be 1 or 11
+     */
+    // this.cards.reduce((acc, i) => acc + i.value, 0);
+    let aceCount = 0;
+    let sumWithoutAce = 0;
+    for (let i = 0, c = this.cards.length; i < c; i++) {
+      const c = this.cards[i];
+      if (c.face == "A") {
+        aceCount++
+      } else {
+        sumWithoutAce += c.value
+      }
+    }
+
+    if (aceCount == 0) {
+      return sumWithoutAce
+    }
+
+    let min = sumWithoutAce;
+    for (let i = 0; i < aceCount; i++) {
+      if (i == aceCount - 1 && min + 11 == BlackJackPoint) {
+        return BlackJackPoint;
+      } else {
+        min += 1;
+      }
+    }
+
+    return min
+  }
+
+  // has no more turn
+  get stopped() {
+    return this.status != HandStatus.Hit
+  }
 
   /**
    * @param handIdx of hand in match
@@ -31,21 +72,43 @@ export class Hand {
 
   // eval cards on hand
   private eval(): HandStatus {
-    return HandStatus.Hit; // TODO
+    // dealer need to continue get card until >= 17 ==> move this logic to match
+    // if (this.isDealer()) {}
+
+    // eval
+    const p = this.point
+    if (p === BlackJackPoint) {
+      this.status = HandStatus.BlackJack;
+    }
+    if (p > BlackJackPoint) {
+      this.status = HandStatus.Burst;
+    }
+
+    return this.status
   }
 
   // add card to the hand
-  // this operation is for initializing or unit test
+  // public this operation is for initializing or unit test
   unsafeAddCard(card: Card) {
     this.cards.push(card)
   }
 
-  hit(card: Card) {
+  hit(card: Card): HandStatus {
+    if (this.status != HandStatus.Hit) {
+      throw new Error(`Hand status must be hit, your hand status: ${this.status}`)
+    }
+
     this.unsafeAddCard(card)
-    // TODO
+    return this.eval()
   }
 
   stay() {
     this.status = HandStatus.Stay
+    // return this.eval()
+    return this.status
+  }
+
+  isDealer() {
+    return this.handIdx === 0
   }
 }
