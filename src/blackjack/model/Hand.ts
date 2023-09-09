@@ -111,4 +111,9 @@ export class Hand {
   isDealer() {
     return this.handIdx === 0
   }
+
+  wasStoppedAndWaitingDealerTurn() {
+    return this.status === HandStatus.Stay ||
+      this.status === HandStatus.BlackJack;
+  }
 }

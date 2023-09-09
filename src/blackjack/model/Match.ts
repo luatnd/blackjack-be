@@ -1,6 +1,8 @@
-import { MatchDto, MatchStatus } from "../datasource/db-collection/Matchs";
+import { HandStatus, MatchDto, MatchStatus } from "../datasource/db-collection/Matchs";
 import { Hand } from "./Hand";
 import { Card, CardVariant, getCard } from "./Card";
+
+type CardLike = [face: string, variant: CardVariant, deckIdx: number];
 
 /*
   This BlackJack Match support multiple hands
@@ -8,7 +10,7 @@ import { Card, CardVariant, getCard } from "./Card";
 export class Match {
   hands: Hand[] = []; // NOTE: Dealer hand is always at 0
   deck: Card[] = [];
-  status: MatchStatus = MatchStatus.Playing;
+  status: MatchStatus = MatchStatus.PlayersTurn;
 
   // prevent this entry point
   private constructor() {}
@@ -41,21 +43,44 @@ export class Match {
     return match;
   }
 
-  playerHit(handIdx: number) {
+  // include dealer
+  playerHit(handIdx: number): Hand {
     // validate
+    // - only can hit if status is still hit
+    if (handIdx >= this.hands.length) {
+      throw new Error(`handIdx out of range: current hands len = ${this.hands.length}`)
+    }
+    const hand = this.hands[handIdx];
 
     // --
-    const hand = this.hands[handIdx];
-    // const card: Card = TODO;
-    // hand.hit(card)
+    const card = this.pickCardFromDeck();
+    hand.hit(card)
+
+    // eval: when no more this hand turns, see HandStatus
+    if (hand.status === HandStatus.Burst) {
+      this.onHandBurst(handIdx)
+    } else if (hand.wasStoppedAndWaitingDealerTurn()) {
+      this.onHandStop(handIdx)
+    }
+
+    // after all evaluation
+    // Match might be stopped
+    return hand
   }
 
   playerStay(handIdx: number) {
     // validate
-
-    // then
+    if (handIdx >= this.hands.length) {
+      throw new Error(`handIdx out of range: current hands len = ${this.hands.length}`)
+    }
     const hand = this.hands[handIdx];
     hand.stay();
+
+    if (hand.wasStoppedAndWaitingDealerTurn()) {
+      this.onHandStop(handIdx)
+    }
+
+    return hand
   }
 
   /**
@@ -86,7 +111,7 @@ export class Match {
       }
       return hands;
     }).flat()
-    this.status = MatchStatus.Playing
+    this.status = MatchStatus.PlayersTurn
 
     // player will play first
   }
@@ -99,10 +124,8 @@ export class Match {
   private init2CardEachHand() {
     for (let i = 0, c = this.hands.length; i < c; i++) {
       const hand = this.hands[i];
-      let c = this.deck.pop()
-      c && hand.unsafeAddCard(c)
-      c = this.deck.pop()
-      c && hand.unsafeAddCard(c)
+      hand.hit(this.pickCardFromDeck())
+      hand.hit(this.pickCardFromDeck())
     }
   }
 
@@ -122,5 +145,99 @@ export class Match {
     }
 
     return cards;
+  }
+
+  private pickCardFromDeck(): Card {
+    const c = this.deck.pop()
+    if (!c) {
+      throw new Error(`deck ran out of cards`)
+    }
+    return c
+  }
+
+  private onHandBurst(handIdx: number) {
+    this.evalDealerTurn()
+  }
+
+  // Hand stop mean player stop turn, waiting for dealer
+  private onHandStop(handIdx: number) {
+    this.evalDealerTurn()
+  }
+
+  // check if it dealer turn then continue to dealer turn
+  // Dealer turn is all user is not hit anymore
+  private evalDealerTurn() {
+    // revalidate status if no more player hit
+    const allPlayerStopped = this.hands.reduce((acc, i) => {
+      return i.isDealer() ? true : acc && i.stopped;
+    }, true)
+
+    if (!allPlayerStopped) return;
+
+    // --- start dealer turn
+    this.status = MatchStatus.DealerTurn;
+
+    const h = this.hands[0]
+    if (!h.isDealer()) {
+      throw new Error("Hand0 is not dealer, this cannot be happen")
+    }
+
+    while (h.point < 17) {
+      h.hit(this.pickCardFromDeck())
+    }
+
+    this.evalMatch()
+  }
+
+  /**
+   * Stop the match and eval who win or lose
+   */
+  private evalMatch() {
+    const dealerHand = this.hands[0];
+    const dealerP = dealerHand.point;
+    // console.log('{evalMatch} dealerP: ', dealerP, dealerHand);
+
+    for (let i = 1, c = this.hands.length; i < c; i++) {
+      const playerHand = this.hands[i];
+
+      if (!playerHand.wasStoppedAndWaitingDealerTurn()) return;
+
+      // rule
+      // - who burst then lose, no matter other user is, but user always burst first
+      // - user blackjack but dealer blackjack too => Draw
+      // - if no one burst, who large will win, or draw if equal
+
+      // user burst: if playerHand.status = Burst then already final result
+      if (playerHand.status === HandStatus.Burst) {}
+      // dealer burst: => win
+      else if (dealerHand.status === HandStatus.Burst) {
+        playerHand.status = (playerHand.status === HandStatus.BlackJack)
+          ? HandStatus.WinBlackJack
+          : HandStatus.Win;
+      }
+      // both black jack
+      else if (playerHand.status === HandStatus.BlackJack && dealerHand.status === HandStatus.BlackJack) {
+        playerHand.status = HandStatus.Draw;
+      }
+      // who larger win
+      else {
+        const p = playerHand.point;
+        playerHand.status =
+            p < dealerP ? HandStatus.Lose
+          : p == dealerP ? HandStatus.Draw
+          : (
+            playerHand.status === HandStatus.BlackJack
+              ? HandStatus.WinBlackJack
+              : HandStatus.Win
+          );
+      }
+    }
+
+    this.status = MatchStatus.Completed
+  }
+
+  // for unit test only
+  static newDeckWithCards(cardLikeArr: CardLike[]): Card[] {
+    return cardLikeArr.map(i => getCard(...i)).reverse(); // FILO => FIFO
   }
 }
