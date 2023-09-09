@@ -7,6 +7,9 @@ export type PlayerDto = {
 }
 export const DEALER_ID = "DEALER";
 
+/**
+ * @deprecated No more using because we use auth module from boiler plate
+ */
 export class PlayerDao implements Dao<PlayerDto> {
   insert(item: PlayerDto) {
     // TODO

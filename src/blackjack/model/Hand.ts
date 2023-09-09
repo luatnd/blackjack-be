@@ -65,6 +65,14 @@ export class Hand {
     h.cards = dto.cards
     return h
   }
+  static to(h: Hand): HandDto {
+    return {
+      playerId: h.playerId,
+      handIdx: h.handIdx,
+      cards: [...h.cards],
+      status: h.status,
+    }
+  }
 
   getCards(): Card[] {
     return this.cards;
@@ -103,6 +111,11 @@ export class Hand {
   }
 
   stay() {
+    // can not stay if finished
+    if (this.wasStoppedAndWaitingDealerTurn()) {
+      throw new Error(`Cannot stay, hand is waiting for eval by dealer: ${this.status}`)
+    }
+
     this.status = HandStatus.Stay
     // return this.eval()
     return this.status

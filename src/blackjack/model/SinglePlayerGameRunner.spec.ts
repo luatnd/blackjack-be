@@ -3,8 +3,11 @@ import { HandStatus, MatchStatus } from "../datasource/db-collection/Matchs";
 import { DEALER_ID } from "../datasource/dao/Player.dao";
 import { CardVariant } from "./Card";
 import { Match } from "./Match";
+import { sleep } from "../../utils/time";
 
 describe('SinglePlayerGameRunner', () => {
+  const V = CardVariant;
+
   it('can init a clean game', () => {
     const player = {id: "1", name: "Debby"}
 
@@ -23,7 +26,6 @@ describe('SinglePlayerGameRunner', () => {
   });
 
   it('hit until burst', () => {
-    const V = CardVariant;
     const player = {id: "1", name: "Debby"}
 
     // clean last game of this user
@@ -54,11 +56,11 @@ describe('SinglePlayerGameRunner', () => {
   });
 
   it('hit and stay', () => {
-    const V = CardVariant;
     const player = {id: "1", name: "Debby"}
 
     // clean last game of this user
     SinglePlayerGameRunner.cleanMatch(player.id);
+
     const game = new SinglePlayerGameRunner(0, player.name, player.id);
 
     const customDeck = Match.newDeckWithCards([
@@ -89,30 +91,123 @@ describe('SinglePlayerGameRunner', () => {
   it('can work between api request', () => {
     const player = {id: "1", name: "Debby"}
 
+    // clean last game of this user
+    SinglePlayerGameRunner.cleanMatch(player.id);
+
+    const customDeck = Match.newDeckWithCards([
+      // face, var, deck
+      // dealer
+      ["1", V.Spade, 0],
+      ["8", V.Spade, 0],
+      // player
+      ["1", V.Spade, 0],
+      ["A", V.Spade, 1],
+      // rest
+      ["1", V.Spade, 1],
+      ["1", V.Club, 1],
+      ["1", V.Diamond, 1],
+      ["1", V.Heart, 1],
+      ["1", V.Spade, 2],
+      ["1", V.Club, 2],
+      ["1", V.Diamond, 2],
+      ["1", V.Heart, 2],
+
+      ["J", V.Heart, 0],
+    ]);
+
     // first api request
     const game = new SinglePlayerGameRunner(0, player.name, player.id);
-    expect(game.player.name).toEqual("Debby")
-    expect(game.lastMatch).toBeDefined()
+    game.debugReInitMatch(customDeck)
 
+    game.hit()
+    expect(game.lastMatch.hands[1].point).toEqual(13)
+
+
+    // 2nd request
     const gameReq2 = new SinglePlayerGameRunner(0, player.name, player.id);
-    expect(gameReq2.player.name).toEqual("Debby")
+    expect(gameReq2.player.name).toEqual(player.name)
     expect(gameReq2.lastMatch).toBeDefined()
     gameReq2.hit()
+    expect(gameReq2.lastMatch.hands[1].point).toEqual(14)
 
+    // 3rd request
     const gameReq3 = new SinglePlayerGameRunner(0, player.name, player.id);
-    expect(gameReq3.player.name).toEqual("Debby")
-    expect(gameReq3.lastMatch).toBeDefined()
+    expect(gameReq3.player.name).toEqual(player.name)
+    expect(gameReq3.lastMatch.hands[1].point).toEqual(14)
     gameReq3.stay()
-
-    // check the result
-    throw new Error("Todo")
+    expect(gameReq3.lastMatch.hands[1].point).toEqual(14)
+    expect(gameReq3.lastMatch.hands[1].status).toEqual(HandStatus.Win)
+    expect(gameReq3.lastMatch.hands[0].status).toEqual(HandStatus.Burst)
+    expect(gameReq3.lastMatch.hands[0].point).toEqual(25)
   });
 
   it('can correctly store to in-mem db', () => {
-    throw new Error("Todo")
+    const player = {id: "1", name: "Debby"}
+
+    // clean last game of this user
+    SinglePlayerGameRunner.cleanMatch(player.id);
+
+    const customDeck = Match.newDeckWithCards([
+      // face, var, deck
+      // dealer
+      ["1", V.Spade, 0],
+      ["8", V.Spade, 0],
+      // player
+      ["1", V.Spade, 0],
+      ["A", V.Spade, 1],
+      // rest
+      ["1", V.Spade, 1],
+      ["1", V.Club, 1],
+      ["1", V.Diamond, 1],
+      ["1", V.Heart, 1],
+      ["1", V.Spade, 2],
+      ["1", V.Club, 2],
+      ["1", V.Diamond, 2],
+      ["1", V.Heart, 2],
+
+      ["J", V.Heart, 0],
+    ]);
+
+    // first api request
+    const game = new SinglePlayerGameRunner(0, player.name, player.id);
+    game.debugReInitMatch(customDeck)
+
+    game.hit()
+    expect(game.lastMatch.hands[1].point).toEqual(13)
+
+    const lastMatch = game.matchDao.findByPlayerId(player.id);
+    expect(lastMatch!.hands[1].cards[2].value).toEqual(1)
   })
 
-  it('delay should work', () => {
-    throw new Error("Todo")
+  it('delay should work', async () => {
+    const player = {id: "1", name: "Debby"}
+    const game = new SinglePlayerGameRunner(1, player.name, player.id);
+    if (game.lastMatch.hands[1].status != HandStatus.BlackJack) {
+      game.hit()
+    }
+    game.stay() // finish match
+
+    await sleep(500)
+    expect(() => game.newMatch()).toThrow(`Need to wait 1 seconds between each round`)
+
+    await sleep(1500)
+    const oldMatchId = game.lastMatch.id;
+
+    game.newMatch()
+    const newMatchId = game.lastMatch.id;
+    expect(newMatchId != oldMatchId).toBeTruthy()
+  })
+
+  it('can handle concurrency while multiple user are playing', () => {
+    const player = {id: "1", name: "Debby"}
+    const player2 = {id: "2", name: "Alice"}
+
+    const game = new SinglePlayerGameRunner(1, player.name, player.id);
+    const game2 = new SinglePlayerGameRunner(1, player2.name, player2.id);
+    const game3 = new SinglePlayerGameRunner(1, player2.name, player2.id);
+    game.stay()
+    game3.stay()
+
+    expect(game.lastMatch.id != game3.lastMatch.id).toBeTruthy()
   })
 });

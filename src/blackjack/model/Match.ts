@@ -1,6 +1,7 @@
 import { HandStatus, MatchDto, MatchStatus } from "../datasource/db-collection/Matchs";
 import { Hand } from "./Hand";
 import { Card, CardVariant, getCard } from "./Card";
+import { nanoid6 } from "../datasource/NanoId";
 
 type CardLike = [face: string, variant: CardVariant, deckIdx: number];
 
@@ -14,22 +15,38 @@ export class Match {
   deck: Card[] = [];
   status: MatchStatus = MatchStatus.PlayersTurn;
 
+  stopAt: number;
+  id: string;
+
   // prevent this entry point
   private constructor() {}
 
   static from(dto: MatchDto): Match {
     const match = new Match();
-    match.deck = dto.deck;
+    match.id = dto.id;
+    match.deck = [...dto.deck];
     match.hands = dto.hands.map(i => Hand.from(i));
     match.status = dto.status;
+    match.stopAt = dto.stopAt;
 
     return match;
+  }
+
+  static toDto(m: Match): MatchDto {
+    return {
+      id: m.id,
+      deck: [...m.deck],
+      hands: m.hands.map(i => Hand.to(i)),
+      status: m.status,
+      stopAt: m.stopAt,
+    }
   }
 
   static new(playerIds: string[], playerHandCount: number[]): Match {
     const match = new Match();
     match.init(playerIds, playerHandCount);
     match.init2CardEachHand()
+
     return match;
   }
 
@@ -55,6 +72,9 @@ export class Match {
       throw new Error(`handIdx out of range: current hands len = ${this.hands.length}`)
     }
     const hand = this.hands[handIdx];
+    if (hand.wasStoppedAndWaitingDealerTurn()) {
+      throw new Error(`Hand is stop and waiting for dealer`)
+    }
 
     // --
     const card = this.pickCardFromDeck();
@@ -98,6 +118,8 @@ export class Match {
    * @private
    */
   private init(playerIds: string[], playerHandCount: number[], customDeck?: Card[]) {
+    this.id = nanoid6();
+
     if (!customDeck) {
       // new shuffled 52 cards deck
       const decks = [0, 1, 2, 3, 4, 5].map(i => this.gen52CardsDeck(i));
@@ -241,6 +263,7 @@ export class Match {
     }
 
     this.status = MatchStatus.Completed
+    this.stopAt = Date.now()
   }
 
   // for unit test only

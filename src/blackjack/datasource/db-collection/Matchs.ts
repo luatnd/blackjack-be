@@ -33,6 +33,7 @@ export type MatchDto = {
   hands: HandDto[],
   deck: Card[],
   status: MatchStatus,
+  stopAt: number, // last stop = unix ts in milli-secs
 }
 
 export type Matches = Record<Id, MatchDto>;

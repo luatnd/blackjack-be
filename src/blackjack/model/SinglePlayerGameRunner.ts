@@ -1,5 +1,5 @@
 import { Match } from "./Match";
-import { DEALER_ID, PlayerDao, PlayerDto } from "../datasource/dao/Player.dao";
+import { DEALER_ID, PlayerDto } from "../datasource/dao/Player.dao";
 import { MatchDao } from "../datasource/dao/Match.dao";
 import { MatchStatus } from "../datasource/db-collection/Matchs";
 import { Card } from "./Card";
@@ -18,11 +18,14 @@ export class SinglePlayerGameRunner {
   delay: number = 0; // the duration between each round
   player: PlayerDto;
   lastMatch: Match;
-  lastMatchStopTs: number = 0;
+
+  matchDao: MatchDao;
 
   static USER_HAND_IDX = 1;
 
   constructor(delay: number, playerName: string, playerId: string) {
+    this.matchDao = new MatchDao()
+
     this.init(delay, playerName, playerId);
   }
 
@@ -45,13 +48,13 @@ export class SinglePlayerGameRunner {
     }
 
     // restore from user last playing match
-    const userLastMatch = new MatchDao().findByPlayerId(this.player.id);
+    const userLastMatch = this.matchDao.findByPlayerId(this.player.id);
 
     if (userLastMatch && userLastMatch.status == MatchStatus.PlayersTurn) {
       this.lastMatch = Match.from(userLastMatch)
     } else {
       // or create new match
-      this.initMatch()
+      this.initNewMatch()
     }
   }
 
@@ -62,11 +65,7 @@ export class SinglePlayerGameRunner {
 
   // init match
   // customDeck is use for debug + unit test only
-  private initMatch(customDeck?: Card[]) {
-    if (Date.now() - this.lastMatchStopTs < this.delay * 1000) {
-      throw new Error(`Need to wait ${this.delay} seconds between each round`);
-    }
-
+  private initNewMatch(customDeck?: Card[]) {
     const playerIds = [DEALER_ID, this.player.id];
     // in this game runner: Each player can have only 1 hand
     const playerHandCount = new Array(playerIds.length).fill(1);
@@ -78,17 +77,27 @@ export class SinglePlayerGameRunner {
     }
 
 
-    // persist
-    // TODO
+    this.matchDao.insert(Match.toDto(this.lastMatch))
   }
 
   // for debug only
   debugReInitMatch(customDeck: Card[]) {
-    this.initMatch(customDeck)
+    this.initNewMatch(customDeck)
   }
 
   newMatch() {
-    this.initMatch()
+    // restore from user last playing match
+    const userLastMatch = this.matchDao.findByPlayerId(this.player.id);
+    if (userLastMatch && userLastMatch.status == MatchStatus.PlayersTurn) {
+      throw new Error("Cannot create new match while having a on-going match")
+    }
+
+    const lastStop = userLastMatch ? userLastMatch.stopAt : 0;
+    if (Date.now() - lastStop < this.delay * 1000) {
+      throw new Error(`Need to wait ${this.delay} seconds between each round`);
+    }
+
+    this.initNewMatch()
   }
 
   hit() {
@@ -100,7 +109,7 @@ export class SinglePlayerGameRunner {
     const playerHand = this.lastMatch.playerHit(SinglePlayerGameRunner.USER_HAND_IDX)
 
     // persist
-    // TODO
+    this.matchDao.update(Match.toDto(this.lastMatch))
 
     return playerHand
   }
@@ -114,7 +123,7 @@ export class SinglePlayerGameRunner {
     const playerHand = this.lastMatch.playerStay(SinglePlayerGameRunner.USER_HAND_IDX)
 
     // persist
-    // TODO
+    this.matchDao.update(Match.toDto(this.lastMatch))
 
     return playerHand
   }
