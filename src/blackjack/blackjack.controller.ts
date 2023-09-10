@@ -3,6 +3,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import {GameMatch} from "./model/GameMatch";
 import {BlackjackService} from "./blackjack.service";
+import {HandDto} from "./datasource/db-collection/Matchs";
 
 
 @ApiTags('BlackJack')
@@ -36,15 +37,17 @@ export class BlackjackController {
   @Patch('hit')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public hit(): Promise<string> {
-    return new Promise(resolve => resolve("oke"));
+  public hit(@Request() request): Promise<GameMatch> {
+    const user = request.user
+    return this.service.hit(user.id);
   }
 
   @ApiBearerAuth()
   @Patch('stay')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public stay(): Promise<string> {
-    return new Promise(resolve => resolve("oke"));
+  public stay(@Request() request): Promise<GameMatch> {
+    const user = request.user
+    return this.service.stay(user.id);
   }
 }
