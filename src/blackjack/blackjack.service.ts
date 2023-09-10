@@ -5,7 +5,7 @@ import {SinglePlayerGameRunner} from "./game-play/SinglePlayerGameRunner";
 import {Hand} from "./game-play/Hand";
 import {ErrorResponse} from "./model/ErrorResponse";
 
-const GAME_DELAY = 1; // in seconds
+const GAME_DELAY = 5; // in seconds
 
 @Injectable()
 export class BlackjackService {
