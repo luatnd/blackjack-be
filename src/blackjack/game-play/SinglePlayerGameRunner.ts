@@ -50,6 +50,14 @@ export class SinglePlayerGameRunner {
     // restore from user last playing match
     const userLastMatch = this.matchDao.findByPlayerId(this.player.id);
 
+    // validate delay
+    if (userLastMatch && userLastMatch.status == MatchStatus.Completed) {
+      const lastStop = userLastMatch ? userLastMatch.stopAt : 0;
+      if (Date.now() - lastStop < this.delay * 1000) {
+        throw new Error(`Need to wait ${this.delay} seconds between each round`);
+      }
+    }
+
     if (userLastMatch && userLastMatch.status == MatchStatus.PlayersTurn) {
       this.lastMatch = Match.from(userLastMatch)
     } else {

@@ -1,53 +1,116 @@
 import {Injectable} from '@nestjs/common';
 import {UsersService} from "../users/users.service";
 import {GameMatch} from "./model/GameMatch";
-import {HandDto, HandStatus, MatchStatus} from "./datasource/db-collection/Matchs";
 import {SinglePlayerGameRunner} from "./game-play/SinglePlayerGameRunner";
 import {Hand} from "./game-play/Hand";
+import {ErrorResponse} from "./model/ErrorResponse";
 
-const GAME_DELAY = 10; // in seconds
+const GAME_DELAY = 1; // in seconds
 
 @Injectable()
 export class BlackjackService {
   constructor(private readonly usersService: UsersService) {}
 
-  async createNewMatch(playerId: number): Promise<GameMatch> {
+  async createNewMatch(playerId: number): Promise<GameMatch | ErrorResponse> {
     // create/restore the last match, all is handled in SinglePlayerGameRunner
-    return this.getUserLastMatch(playerId)
-  }
-
-  async getUserLastMatch(playerId: number): Promise<GameMatch> {
     const player = await this.getPlayerInfo(playerId)
     /*
       init game runner for this player with last persisted info
       if match don't exist: init new, all is handled in SinglePlayerGameRunner
      */
-    const game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
-
-    return this.getGameMatchObj(game, player)
-  }
-
-  async hit(playerId: number): Promise<GameMatch> {
-    const player = await this.getPlayerInfo(playerId)
-    const game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
-
+    let game: SinglePlayerGameRunner;
     try {
-      game.hit()
+      game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
     } catch (e) {
-      return this.getGameMatchObj(game, player, e.message)
+      return {
+        errorCode: 'CreateError',
+        message: e.message,
+      }
     }
 
     return this.getGameMatchObj(game, player)
   }
 
-  async stay(playerId: number): Promise<GameMatch> {
+  async getUserLastMatch(playerId: number): Promise<GameMatch | ErrorResponse> {
     const player = await this.getPlayerInfo(playerId)
-    const game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
+    /*
+      init game runner for this player with last persisted info
+      if match don't exist: init new, all is handled in SinglePlayerGameRunner
+     */
+    let game: SinglePlayerGameRunner;
+    try {
+      game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
+    } catch (e) {
+      return {
+        errorCode: 'CreateError',
+        message: e.message,
+      }
+    }
+
+    return this.getGameMatchObj(game, player)
+  }
+
+  async hit(playerId: number, matchId: string): Promise<GameMatch | ErrorResponse> {
+    const player = await this.getPlayerInfo(playerId)
+
+    let game: SinglePlayerGameRunner;
+    try {
+      game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
+    } catch (e) {
+      return {
+        errorCode: 'CreateError',
+        message: e.message,
+      }
+    }
+
+    // validate id
+    if (game.lastMatch.id !== matchId) {
+      return {
+        errorCode: 'InvalidId',
+        message: `Invalid match: old=${matchId} new=${game.lastMatch.id}`,
+      }
+    }
+
+    try {
+      game.hit()
+    } catch (e) {
+      return {
+        errorCode: 'HitError',
+        message: e.message,
+      }
+    }
+
+    return this.getGameMatchObj(game, player)
+  }
+
+  async stay(playerId: number, matchId: string): Promise<GameMatch | ErrorResponse> {
+    const player = await this.getPlayerInfo(playerId)
+
+    let game: SinglePlayerGameRunner;
+    try {
+      game = new SinglePlayerGameRunner(GAME_DELAY, player.name, player.id);
+    } catch (e) {
+      return {
+        errorCode: 'CreateError',
+        message: e.message,
+      }
+    }
+
+    // validate id
+    if (game.lastMatch.id !== matchId) {
+      return {
+        errorCode: 'InvalidId',
+        message: `Invalid match: old=${matchId} new=${game.lastMatch.id}`,
+      }
+    }
 
     try {
       game.stay()
     } catch (e) {
-      return this.getGameMatchObj(game, player, e.message)
+      return {
+        errorCode: 'HitError',
+        message: e.message,
+      }
     }
 
     return this.getGameMatchObj(game, player)
@@ -63,12 +126,14 @@ export class BlackjackService {
     const playerHand = Hand.to(game.lastMatch.hands[1]);
 
     return {
+      id: game.lastMatch.id,
       dealerHand,
       playerHand,
       player,
       status: game.lastMatch.status,
       stopAt: game.lastMatch.stopAt,
       error,
+      delay: GAME_DELAY,
     }
   }
 }

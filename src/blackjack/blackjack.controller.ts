@@ -3,7 +3,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import {GameMatch} from "./model/GameMatch";
 import {BlackjackService} from "./blackjack.service";
-import {HandDto} from "./datasource/db-collection/Matchs";
+import {ErrorResponse} from "./model/ErrorResponse";
 
 
 @ApiTags('BlackJack')
@@ -19,7 +19,7 @@ export class BlackjackController {
   @Get('last-match')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public lastMatch(@Request() request): Promise<GameMatch> {
+  public lastMatch(@Request() request): Promise<GameMatch | ErrorResponse> {
     const user = request.user
     return this.service.getUserLastMatch(user.id);
   }
@@ -28,26 +28,28 @@ export class BlackjackController {
   @Post('new-match')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public newMatch(@Request() request): Promise<GameMatch> {
+  public newMatch(@Request() request): Promise<GameMatch | ErrorResponse> {
     const user = request.user
     return this.service.createNewMatch(user.id);
   }
 
   @ApiBearerAuth()
-  @Patch('hit')
+  @Patch('match/:id/hit')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public hit(@Request() request): Promise<GameMatch> {
+  public hit(@Request() request): Promise<GameMatch | ErrorResponse> {
     const user = request.user
-    return this.service.hit(user.id);
+    const matchId = request.params.id
+    return this.service.hit(user.id, matchId);
   }
 
   @ApiBearerAuth()
-  @Patch('stay')
+  @Patch('match/:id/stay')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
-  public stay(@Request() request): Promise<GameMatch> {
+  public stay(@Request() request): Promise<GameMatch | ErrorResponse> {
     const user = request.user
-    return this.service.stay(user.id);
+    const matchId = request.params.id
+    return this.service.stay(user.id, matchId);
   }
 }
