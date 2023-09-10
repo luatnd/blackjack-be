@@ -126,7 +126,8 @@ export class Hand {
   }
 
   wasStoppedAndWaitingDealerTurn() {
-    return this.status === HandStatus.Stay ||
-      this.status === HandStatus.BlackJack;
+    return this.status === HandStatus.Stay
+      || this.status === HandStatus.BlackJack
+      || this.status === HandStatus.Burst
   }
 }

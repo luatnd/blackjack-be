@@ -10,9 +10,7 @@ export enum HandStatus {
   // Waiting dealer
   Stay = "Stay",
   BlackJack = "BlackJack",
-
-  // final status
-  Burst = "Burst",  // lose by Burst
+  Burst = "Burst",  // lose by Burst // also a final status
 
   // final status via eval with dealer
   Win = "Win",      // normal win

@@ -33,6 +33,7 @@ describe("Match", () => {
     h = match.playerHit(1); // Q
     // player should Burst now => and stop the match
     expect(match.hands[1].status).toEqual(HandStatus.Burst)
+    expect(match.status).toEqual(MatchStatus.Completed)
   });
 
   it("hit BlackJack", () => {
