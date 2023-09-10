@@ -46,7 +46,7 @@ export class Match {
     const match = new Match();
     match.init(playerIds, playerHandCount);
     match.init2CardEachHand()
-
+    match.evalDealerTurn() // try to eval after init because: if all user is blackjack then they cannot hit anymore
     return match;
   }
 
@@ -59,6 +59,7 @@ export class Match {
     const match = new Match();
     match.init(playerIds, playerHandCount, customDeck);
     match.init2CardEachHand()
+    match.evalDealerTurn() // try to eval after init because: if all user is blackjack then they cannot hit anymore
     return match;
   }
 

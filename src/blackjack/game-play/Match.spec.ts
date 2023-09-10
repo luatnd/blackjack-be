@@ -62,6 +62,31 @@ describe("Match", () => {
     expect(match.status).toEqual(MatchStatus.Completed)
   });
 
+  it("init BlackJack", () => {
+    const customDeck = Match.newDeckWithCards([
+      // face, var, deck
+      // dealer
+      ["1", V.Spade, 0],
+      ["8", V.Spade, 0],
+      // player
+      ["A", V.Spade, 0],
+      ["J", V.Spade, 1],
+      // rest
+      ["9", V.Spade, 0],
+      ["Q", V.Spade, 0],
+      ["K", V.Spade, 0],
+    ]);
+
+    const match = Match.newWithDebug(
+      [DEALER_ID, "1"],
+      [1, 1],
+      customDeck
+    );
+
+    expect(match.hands[1].status).toEqual(HandStatus.WinBlackJack)
+    expect(match.status).toEqual(MatchStatus.Completed)
+  });
+
   it("hit stay", () => {
     const customDeck = Match.newDeckWithCards([
       // face, var, deck
