@@ -5,6 +5,7 @@ export type Card = {
   value2?: number, // the value of this card in blackjack game only
   variant: CardVariant,
   deck?: number, // 312 cards from 6 decks, so we will have 6 same card
+  backFace?: boolean, // hide this card
 }
 
 export function getCard(face: string, variant: CardVariant, deck: number): Card {

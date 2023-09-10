@@ -4,6 +4,7 @@ import {GameMatch} from "./model/GameMatch";
 import {SinglePlayerGameRunner} from "./game-play/SinglePlayerGameRunner";
 import {Hand} from "./game-play/Hand";
 import {ErrorResponse} from "./model/ErrorResponse";
+import {HandDto, MatchStatus} from "./datasource/db-collection/Matchs";
 
 const GAME_DELAY = 5; // in seconds
 
@@ -125,6 +126,10 @@ export class BlackjackService {
     const dealerHand = Hand.to(game.lastMatch.hands[0]);
     const playerHand = Hand.to(game.lastMatch.hands[1]);
 
+    if (game.lastMatch.status != MatchStatus.Completed) {
+      this.hideCard(dealerHand, 0)
+    }
+
     return {
       id: game.lastMatch.id,
       dealerHand,
@@ -135,5 +140,14 @@ export class BlackjackService {
       error,
       delay: GAME_DELAY,
     }
+  }
+
+  private hideCard(hand: HandDto, cardIdx: number) {
+    // hide sensitive info of first card
+    const card = hand.cards[cardIdx]
+    card.face = "?"
+    card.value = 0;
+    card.value2 = undefined;
+    card.backFace = true
   }
 }
