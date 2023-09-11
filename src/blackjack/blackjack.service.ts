@@ -144,10 +144,12 @@ export class BlackjackService {
 
   private hideCard(hand: HandDto, cardIdx: number) {
     // hide sensitive info of first card
-    const card = hand.cards[cardIdx]
-    card.face = "?"
-    card.value = 0;
-    card.value2 = undefined;
-    card.backFace = true
+    hand.cards[cardIdx] = {
+      ...hand.cards[cardIdx],
+      face: "?",
+      value: 0,
+      value2: undefined,
+      backFace: true,
+    }
   }
 }
