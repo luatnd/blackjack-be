@@ -204,7 +204,7 @@ describe('SinglePlayerGameRunner', () => {
 
     const game = new SinglePlayerGameRunner(1, player.name, player.id);
     const game2 = new SinglePlayerGameRunner(1, player2.name, player2.id);
-    const game3 = new SinglePlayerGameRunner(1, player2.name, player2.id);
+    const game3 = new SinglePlayerGameRunner(1, player2.name, player2.id); // will throw error if game 2 blackjack
     game.stay()
     game3.stay()
 
